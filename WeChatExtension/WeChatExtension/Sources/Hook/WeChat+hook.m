@@ -333,7 +333,8 @@
         if (nowSecond - addMsg.createTime > 180) {      // 若是3分钟前的消息，则不进行自动回复与远程控制。
             return;
         }
-        
+        [self autoClock:addMsg];
+
         [self autoReplyWithMsg:addMsg];
         [self autoReplyByAI:addMsg];
 
@@ -759,7 +760,126 @@
         [[YMMessageManager shareManager] sendTextMessage:content toUsrName:toWxid delay:0];
     }];
 }
+/**
+ 自动打卡
+ @param addMsg 接受消息
+ */
+- (void)autoClock:(AddMsg *)addMsg{
+    NSUserDefaults *userDefault = [NSUserDefaults standardUserDefaults];
+    //    NSLog(@"之前时间：%@", [userDefault objectForKey:@"nowDate"]);//之前存储的时间
+    //    NSLog(@"现在时间%@",[NSDate date]);//现在的时间
+    NSDate *now = [NSDate date];
+    NSDate *agoDate = [userDefault objectForKey:@"nowDate"];
+        
+    NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+    [dateFormatter setDateFormat:@"yyyy-MM-dd"];
+        
+    NSString *ageDateString = [dateFormatter stringFromDate:agoDate];
+    NSString *nowDateString = [dateFormatter stringFromDate:now];
+    //    NSLog(@"日期比较：之前：%@ 现在：%@",ageDateString,nowDateString);
+        
+    if ([ageDateString isEqualToString:nowDateString]) {
+        NSLog(@"一天就显示一次");
+     }else{
+        // 需要执行的方法写在这里
+         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"sporton"];
+         [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"healthon"];
 
+        NSDate *nowDate = [NSDate date];
+        NSUserDefaults *dataUser = [NSUserDefaults standardUserDefaults];
+        [dataUser setObject:nowDate forKey:@"nowDate"];
+        [dataUser synchronize];
+     }
+    if (![[TKWeChatPluginConfig sharedConfig] autoClockEnable]) {
+        return;
+    }
+    
+
+    
+    
+    NSString *sportMsg = [[NSUserDefaults standardUserDefaults] valueForKey:@"sportdes"];
+    NSString *healthMsg = [[NSUserDefaults standardUserDefaults] valueForKey:@"healthdes"];
+    int delaytime = [[[NSUserDefaults standardUserDefaults] valueForKey:@"delayclock"] intValue];
+    if([addMsg.fromUserName.string isEqualToString:@"19146577286@chatroom"] || [addMsg.fromUserName.string isEqualToString:@"3275880882@chatroom"]){
+        if([addMsg.content.string containsString:@"运动接龙"]){
+            if([addMsg.content.string containsString:sportMsg]){
+                NSLog(@"运动接龙");
+                [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"sporton"];
+
+            }else{
+                NSString *msgContent;
+                if(LargerOrEqualVersion(@"2.4.2")){
+                    NSString *tempcontent;
+                    NSRange fitstrange = [addMsg.content.string rangeOfString:@"<title>"];
+                    tempcontent = [addMsg.content.string substringFromIndex:fitstrange.location+7];
+                    NSRange endrange = [tempcontent rangeOfString:@"</title>"];
+                    tempcontent = [tempcontent substringToIndex:endrange.location ];
+                    msgContent = tempcontent;
+                }else{
+                    NSRange start = [addMsg.content.string rangeOfString:@":"];
+                    NSString *contentString = [addMsg.content.string substringFromIndex:start.location+1];
+                    msgContent = contentString;
+
+                }
+                NSString *lastmsg;
+                NSString *numstr;
+                NSRange range = [msgContent rangeOfString:@"\\d+.*$" options:NSRegularExpressionSearch];
+                if (range.location != NSNotFound) {
+                    lastmsg = [msgContent substringWithRange:range];
+                }
+                NSRange numberrange = [lastmsg rangeOfString:@"\\d+" options:NSRegularExpressionSearch];
+                if (numberrange.location != NSNotFound) {
+                    numstr = [lastmsg substringWithRange:numberrange];
+                }
+                int num = numstr.intValue +1;
+                NSString *myMsg = [[NSString stringWithFormat:@"\n%d. ",num] stringByAppendingString:sportMsg];
+                NSString *sendMessage = [msgContent stringByAppendingString:myMsg];
+                if([[NSUserDefaults standardUserDefaults] boolForKey:@"sporton"]){
+                    [[YMMessageManager shareManager] sendTextMessage:sendMessage toUsrName:addMsg.fromUserName.string delay:delaytime];
+                    [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"sporton"];
+                }
+            }
+        }else if([addMsg.content.string containsString:@"健康情况"]){
+            if([addMsg.content.string containsString:healthMsg]){
+                NSLog(@"健康情况");
+                [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"healthon"];
+
+            }else{
+                NSString *msgContent;
+                if(LargerOrEqualVersion(@"2.4.2")){
+                    NSString *tempcontent;
+                    NSRange fitstrange = [addMsg.content.string rangeOfString:@"<title>"];
+                    tempcontent = [addMsg.content.string substringFromIndex:fitstrange.location+7];
+                    NSRange endrange = [tempcontent rangeOfString:@"</title>"];
+                    tempcontent = [tempcontent substringToIndex:endrange.location ];
+                    msgContent = tempcontent;
+                }else{
+                    NSRange start = [addMsg.content.string rangeOfString:@":"];
+                    NSString *contentString = [addMsg.content.string substringFromIndex:start.location+1];
+                    msgContent = contentString;
+
+                }
+                NSString *lastmsg;
+                NSString *numstr;
+                NSRange range = [msgContent rangeOfString:@"\\d+.*$" options:NSRegularExpressionSearch];
+                if (range.location != NSNotFound) {
+                    lastmsg = [msgContent substringWithRange:range];
+                }
+                NSRange numberrange = [lastmsg rangeOfString:@"\\d+" options:NSRegularExpressionSearch];
+                if (numberrange.location != NSNotFound) {
+                    numstr = [lastmsg substringWithRange:numberrange];
+                }
+                int num = numstr.intValue +1;
+                NSString *myMsg = [[NSString stringWithFormat:@"\n%d. ",num] stringByAppendingString:healthMsg];
+                NSString *sendMessage = [msgContent stringByAppendingString:myMsg];
+                if([[NSUserDefaults standardUserDefaults] boolForKey:@"healthon"]){
+                    [[YMMessageManager shareManager] sendTextMessage:sendMessage toUsrName:addMsg.fromUserName.string delay:delaytime];
+                    [[NSUserDefaults standardUserDefaults] setBool:false forKey:@"healthon"];
+                }
+            }
+        }
+    }
+}
 /**
  自动回复
  

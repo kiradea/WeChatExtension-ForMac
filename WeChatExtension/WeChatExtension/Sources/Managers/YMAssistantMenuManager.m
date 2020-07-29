@@ -20,6 +20,7 @@
 #import "YMAIReplyWindowController.h"
 #import "YMIMContactsManager.h"
 #import "YMStrangerCheckWindowController.h"
+#import "LJAutoClockWindowController.h"
 
 static char kAutoReplyWindowControllerKey;         //  自动回复窗口的关联 key
 static char kAutoForwardingWindowControllerKey;         //  自动转发窗口的关联 key
@@ -27,6 +28,7 @@ static char kAIAutoReplyWindowControllerKey;         //  AI回复窗口的关联
 static char kRemoteControlWindowControllerKey;     //  远程控制窗口的关联 key
 static char kAboutWindowControllerKey;             //  关于窗口的关联 key
 static char kStrangerCheckWindowControllerKey;         //  僵尸粉检测 key
+static char kAutoClockWindowControllerKey;
 
 @implementation YMAssistantMenuManager
 
@@ -110,8 +112,13 @@ static char kStrangerCheckWindowControllerKey;         //  僵尸粉检测 key
                                                           target:self
                                                    keyEquivalent:@"k"
                                                            state:NO];
+    NSMenuItem *autoClockItem = [NSMenuItem menuItemWithTitle:@"自动打卡"
+                                                       action:@selector(onAutoClock:)
+                                                       target:self
+                                                keyEquivalent:@"k"
+                                                        state:[[TKWeChatPluginConfig sharedConfig] autoClockEnable]];
     NSMenu *autoChatMenu = [[NSMenu alloc] initWithTitle:YMLanguage(@"转发与回复", @"Auto Chat")];
-    [autoChatMenu addItems:@[autoReplyItem, autoForwardingItem, autoAIReplyItem]];
+    [autoChatMenu addItems:@[autoReplyItem, autoForwardingItem, autoAIReplyItem,autoClockItem]];
     forwardAndReplyItem.submenu = autoChatMenu;
     
     
@@ -322,6 +329,7 @@ static char kStrangerCheckWindowControllerKey;         //  僵尸粉检测 key
 - (void)addObserverWeChatConfig
 {
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(weChatPluginConfigAutoReplyChange) name:NOTIFY_AUTO_REPLY_CHANGE object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(weChatPluginConfigAutoClockChange) name:NOTIFY_AUTO_CLOCK_CHANGE object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(weChatPluginConfigAutoForwardingChange) name:NOTIFY_AUTO_FORWARDING_CHANGE object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(weChatPluginConfigAutoForwardingAllChange) name:NOTIFY_AUTO_FORWARDING_ALL_FRIEND_CHANGE object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(weChatPluginConfigPreventRevokeChange) name:NOTIFY_PREVENT_REVOKE_CHANGE object:nil];
@@ -334,7 +342,12 @@ static char kStrangerCheckWindowControllerKey;         //  僵尸粉检测 key
     shareConfig.autoReplyEnable = !shareConfig.autoReplyEnable;
     [self changePluginMenuItemWithIndex:1 state:shareConfig.autoReplyEnable];
 }
-
+- (void)weChatPluginConfigAutoClockChange
+{
+    TKWeChatPluginConfig *shareConfig = [TKWeChatPluginConfig sharedConfig];
+    shareConfig.autoClockEnable = !shareConfig.autoClockEnable;
+    [self changePluginMenuItemWithIndex:3 state:shareConfig.autoClockEnable];
+}
 - (void)weChatPluginConfigAutoForwardingChange
 {
     TKWeChatPluginConfig *shareConfig = [TKWeChatPluginConfig sharedConfig];
@@ -468,7 +481,20 @@ static char kStrangerCheckWindowControllerKey;         //  僵尸粉检测 key
     item.state = !item.state;
     [[TKWeChatPluginConfig sharedConfig] setPreventAsyncRevokeChatRoom:item.state];
 }
-
+- (void)onAutoClock:(NSMenuItem *)item{
+    item.state = !item.state;
+    [[TKWeChatPluginConfig sharedConfig] setAutoClockEnable:item.state];
+    WeChat *wechat = [objc_getClass("WeChat") sharedInstance];
+    LJAutoClockWindowController *autoClockWC = objc_getAssociatedObject(wechat, &kAutoClockWindowControllerKey);
+    
+    if(!autoClockWC){
+        autoClockWC = [[LJAutoClockWindowController alloc] initWithWindowNibName:@"LJAutoClockWindowController"];
+        objc_setAssociatedObject(wechat, &kAutoClockWindowControllerKey, autoClockWC, OBJC_ASSOCIATION_RETAIN);
+    }
+    [autoClockWC show];
+    
+    
+}
 /**
  菜单栏-微信小助手-自动回复 设置
  
