@@ -30,6 +30,7 @@
 #import "YMZGMPBanModel.h"
 #import "YMDFAFilter.h"
 
+
 @implementation NSObject (WeChatHook)
 
 + (void)hookWeChat
@@ -847,7 +848,7 @@
         [dataUser setObject:nowDate forKey:@"nowDate"];
         [dataUser synchronize];
      }
-    if (![[TKWeChatPluginConfig sharedConfig] autoClockEnable]) {
+    if (![[YMWeChatPluginConfig sharedConfig] autoClockEnable]) {
         return;
     }
     

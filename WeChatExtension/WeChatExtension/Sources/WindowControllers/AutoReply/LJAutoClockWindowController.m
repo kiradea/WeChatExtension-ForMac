@@ -91,7 +91,7 @@
  */
 - (BOOL)windowShouldClose:(id)sender
 {
-    [[TKWeChatPluginConfig sharedConfig] saveRemoteControlModels];
+    [[YMWeChatPluginConfig sharedConfig] saveRemoteControlModels];
     return YES;
 }
 @end

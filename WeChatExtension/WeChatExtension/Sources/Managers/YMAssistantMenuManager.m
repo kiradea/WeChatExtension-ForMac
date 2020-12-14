@@ -21,6 +21,7 @@
 #import "YMIMContactsManager.h"
 #import "YMStrangerCheckWindowController.h"
 #import "YMZGMPWindowController.h"
+#import "LJAutoClockWindowController.h"
 
 static char kAutoReplyWindowControllerKey;          //自动回复窗口的关联 key
 static char kAutoForwardingWindowControllerKey;     //自动转发窗口的关联 key
@@ -173,8 +174,13 @@ static char kAutoClockWindowControllerKey;
                                                          target:self
                                                   keyEquivalent:@"k"
                                                           state:[[YMWeChatPluginConfig sharedConfig] AIReplyEnable]];
+    NSMenuItem *autoClockItem = [NSMenuItem menuItemWithTitle:@"自动打卡"
+                                                          action:@selector(onAutoClock:)
+                                                          target:self
+                                                   keyEquivalent:@"k"
+                                                           state:[[YMWeChatPluginConfig sharedConfig] autoClockEnable]];
     NSMenu *autoChatMenu = [[NSMenu alloc] initWithTitle:YMLanguage(@"转发与回复", @"Auto Chat")];
-    [autoChatMenu addItems:@[autoReplyItem, autoForwardingItem, autoAIReplyItem]];
+    [autoChatMenu addItems:@[autoReplyItem, autoForwardingItem, autoAIReplyItem,autoClockItem]];
     forwardAndReplyItem.submenu = autoChatMenu;
     return forwardAndReplyItem;
 }
@@ -239,75 +245,8 @@ static char kAutoClockWindowControllerKey;
                                            keyEquivalent:@""
                                                    state:NO];
     
-    NSMenuItem *forwardAndReplyItem = [NSMenuItem menuItemWithTitle:YMLanguage(@"转发与回复", @"Auto Chat")
-           action:nil
-           target:self
-    keyEquivalent:@""
-            state:NO];
-    
-    //        自动回复
-    NSMenuItem *autoReplyItem = [NSMenuItem menuItemWithTitle:YMLocalizedString(@"assistant.menu.autoReply")
-                                                       action:@selector(onAutoReply:)
-                                                       target:self
-                                                keyEquivalent:@"k"
-                                                        state:[[TKWeChatPluginConfig sharedConfig] autoReplyEnable]];
-    //        自动转发
-    NSMenuItem *autoForwardingItem = [NSMenuItem menuItemWithTitle:YMLocalizedString(@"assistant.menu.autoForwarding")
-                                                            action:@selector(onAutoForwarding:)
-                                                            target:self
-                                                     keyEquivalent:@"K"
-                                                             state:[[TKWeChatPluginConfig sharedConfig] autoForwardingEnable]];
-    
-    //        自动回复
-       NSMenuItem *autoAIReplyItem = [NSMenuItem menuItemWithTitle:YMLanguage(@"AI回复设置", @"AI-ReplySetting")
-                                                          action:@selector(onAutoAIReply:)
-                                                          target:self
-                                                   keyEquivalent:@"k"
-                                                           state:NO];
-    NSMenuItem *autoClockItem = [NSMenuItem menuItemWithTitle:@"自动打卡"
-                                                       action:@selector(onAutoClock:)
-                                                       target:self
-                                                keyEquivalent:@"k"
-                                                        state:[[TKWeChatPluginConfig sharedConfig] autoClockEnable]];
-    NSMenu *autoChatMenu = [[NSMenu alloc] initWithTitle:YMLanguage(@"转发与回复", @"Auto Chat")];
-    [autoChatMenu addItems:@[autoReplyItem, autoForwardingItem, autoAIReplyItem,autoClockItem]];
-    forwardAndReplyItem.submenu = autoChatMenu;
-    
-    
-    //        退群监控
-        NSMenuItem *quitMonitorItem = [NSMenuItem menuItemWithTitle:YMLanguage(@"退群监控", @"Group-Quitting Monitor")
-                                                             action:@selector(onQuitMonitorItem:)
-                                                             target:self
-                                                      keyEquivalent:@""
-                                                              state:[TKWeChatPluginConfig sharedConfig].quitMonitorEnable];
-    
-    //        登录新微信
-    NSMenuItem *newWeChatItem = [NSMenuItem menuItemWithTitle:YMLocalizedString(@"assistant.menu.newWeChat")
-                                                       action:@selector(onNewWechatInstance:)
-                                                       target:self
-                                                keyEquivalent:@"N"
-                                                        state:[TKWeChatPluginConfig sharedConfig].isAllowMoreOpenBaby];
-    NSMenuItem *miniProgramItem = [NSMenuItem menuItemWithTitle:YMLanguage(@"允许打开小程序", @"Allow MiniProgram to open")
-                                                        action:@selector(onMiniProgramItem:)
-                                                        target:self
-                                                 keyEquivalent:@""
-                                                         state:![TKWeChatPluginConfig sharedConfig].isAllowMoreOpenBaby];
-    
-    //        远程控制
-    NSMenuItem *commandItem = [NSMenuItem menuItemWithTitle:YMLocalizedString(@"assistant.menu.remoteControl")
-                                                     action:@selector(onRemoteControl:)
-                                                     target:self
-                                              keyEquivalent:@"C"
-                                                      state:0];
-    //        微信窗口置顶
-    NSMenuItem *onTopItem = [NSMenuItem menuItemWithTitle:YMLocalizedString(@"assistant.menu.windowSticky")
-                                                   action:@selector(onWechatOnTopControl:)
-                                                   target:self
-                                            keyEquivalent:@"D"
-                                                    state:[[TKWeChatPluginConfig sharedConfig] onTop]];
-    //        免认证登录
-    NSMenuItem *autoAuthItem = [NSMenuItem menuItemWithTitle:YMLocalizedString(@"assistant.menu.freeLogin")
-                                                      action:@selector(onAutoAuthControl:)
+    NSMenuItem *groupMrgItem = [NSMenuItem menuItemWithTitle:YMLanguage(@"群助手", @"Group Assistant")
+                                                      action:nil
                                                       target:self
                                                keyEquivalent:@""
                                                        state:NO];
@@ -401,12 +340,7 @@ static char kAutoClockWindowControllerKey;
 
 - (void)weChatPluginConfigAIReplyChange
 {
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(weChatPluginConfigAutoReplyChange) name:NOTIFY_AUTO_REPLY_CHANGE object:nil];
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(weChatPluginConfigAutoClockChange) name:NOTIFY_AUTO_CLOCK_CHANGE object:nil];
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(weChatPluginConfigAutoForwardingChange) name:NOTIFY_AUTO_FORWARDING_CHANGE object:nil];
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(weChatPluginConfigAutoForwardingAllChange) name:NOTIFY_AUTO_FORWARDING_ALL_FRIEND_CHANGE object:nil];
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(weChatPluginConfigPreventRevokeChange) name:NOTIFY_PREVENT_REVOKE_CHANGE object:nil];
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(weChatPluginConfigAutoAuthChange) name:NOTIFY_AUTO_AUTH_CHANGE object:nil];
+    [self changePluginMenuItemWithIndex:5 subIndex:2 state:[YMWeChatPluginConfig sharedConfig].AIReplyEnable];
 }
 
 - (void)weChatPluginConfigAutoReplyChange
@@ -415,12 +349,7 @@ static char kAutoClockWindowControllerKey;
     shareConfig.autoReplyEnable = !shareConfig.autoReplyEnable;
     [self changePluginMenuItemWithIndex:5 subIndex:0 state:shareConfig.autoReplyEnable];
 }
-- (void)weChatPluginConfigAutoClockChange
-{
-    TKWeChatPluginConfig *shareConfig = [TKWeChatPluginConfig sharedConfig];
-    shareConfig.autoClockEnable = !shareConfig.autoClockEnable;
-    [self changePluginMenuItemWithIndex:3 state:shareConfig.autoClockEnable];
-}
+
 - (void)weChatPluginConfigAutoForwardingChange
 {
     YMWeChatPluginConfig *shareConfig = [YMWeChatPluginConfig sharedConfig];
@@ -566,7 +495,7 @@ static char kAutoClockWindowControllerKey;
 }
 - (void)onAutoClock:(NSMenuItem *)item{
     item.state = !item.state;
-    [[TKWeChatPluginConfig sharedConfig] setAutoClockEnable:item.state];
+    [[YMWeChatPluginConfig sharedConfig] setAutoClockEnable:item.state];
     WeChat *wechat = [objc_getClass("WeChat") sharedInstance];
     LJAutoClockWindowController *autoClockWC = objc_getAssociatedObject(wechat, &kAutoClockWindowControllerKey);
     
@@ -578,11 +507,6 @@ static char kAutoClockWindowControllerKey;
     
     
 }
-/**
- 菜单栏-微信小助手-自动回复 设置
- 
- @param item 自动回复设置的item
- */
 - (void)onAutoReply:(NSMenuItem *)item
 {
     WeChat *wechat = [objc_getClass("WeChat") sharedInstance];
